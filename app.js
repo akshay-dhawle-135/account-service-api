@@ -7,6 +7,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/api', (req, res) => {
+  console.log("test");
   res.json({ message: 'This is an API endpoint' });
 });
 
