@@ -3,9 +3,6 @@ name: Deploy Node.js API to AWS ECS
 on:
   workflow_call:
     inputs:
-      GITHUB_REGISTRY:
-        required: true
-        type: string
       GITHUB_IMAGE_NAME:
         required: true
         type: string
@@ -23,54 +20,26 @@ permissions:
 
 jobs:
   aws-ecs-deploy:
-    name: Deploy Node.js API to AWS ECS
     runs-on: ubuntu-latest
     environment: ${{ inputs.ENVIRONMENT }}
 
     steps:
-    - name: Log in to GitHub Packages Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ${{ inputs.GITHUB_REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-region: ${{ vars.AWS_REGION }}
-        role-to-assume: ${{vars.AWS_IAM_ROLE_ARN}}
-        role-session-name: ecs-deployment-${{inputs.ENVIRONMENT}}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: ap-south-1
+          role-to-assume: ${{ vars.AWS_IAM_ROLE_ARN }}
+          role-session-name: ecs-deployment-${{ inputs.ENVIRONMENT }}
 
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
-
-    - name: Pull, tag, and push image to Amazon ECR
-      id: push-ecr
-      env:
-        GITHUB_IMAGE_WITH_TAG: ${{ format('{0}/{1}/{2}:{3}', inputs.GITHUB_REGISTRY, github.repository, inputs.GITHUB_IMAGE_NAME, inputs.GITHUB_IMAGE_TAG) }}
-        AWS_IMAGE_WITH_SHA_TAG: ${{ format('{0}:{1}', vars.IMAGE_REPOSITORY_URL, github.sha) }}
-        AWS_IMAGE_WITH_LATEST_TAG: ${{ format('{0}:latest', vars.IMAGE_REPOSITORY_URL) }}
-      run: |
-        # Pull docker image from GitHub Packages
-        docker pull ${GITHUB_IMAGE_WITH_TAG}
-        # Tag image for AWS ECR with SHA Tag
-        docker tag ${GITHUB_IMAGE_WITH_TAG} $AWS_IMAGE_WITH_SHA_TAG
-        # Push image to AWS ECR with SHA Tag
-        docker push $AWS_IMAGE_WITH_SHA_TAG
-        # Tag image for AWS ECR with Latest Tag
-        docker tag ${GITHUB_IMAGE_WITH_TAG} $AWS_IMAGE_WITH_LATEST_TAG
-        # Push image to AWS ECR with Latest Tag
-        docker push $AWS_IMAGE_WITH_LATEST_TAG
-
-    - name: Update ECS
-      id: ecs-update-service
-      env:
-        ECS_SERVICE_NAME: ${{vars.ECS_SERVICE_NAME}}
-        ECS_CLUSTER_NAME: ${{vars.ECS_CLUSTER_NAME}}
-        ECS_TASK_DEFINITION_ARN: ${{vars.ECS_TASK_DEFINITION_ARN}}
-      run: |
-        # Update ECS service with the new Docker image
-        aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service ${ECS_SERVICE_NAME} --force-new-deployment
-        aws ecs wait services-stable --cluster ${ECS_CLUSTER_NAME} --services ${ECS_SERVICE_NAME}
+      - name: Pull, tag, and push image to Amazon ECR
+        env:
+          GITHUB_IMAGE_WITH_TAG: ghcr.io/${{ github.repository }}/${{ inputs.GITHUB_IMAGE_NAME }}:${{ inputs.GITHUB_IMAGE_TAG }}
+        run: |
+          docker pull ${GITHUB_IMAGE_WITH_TAG}
