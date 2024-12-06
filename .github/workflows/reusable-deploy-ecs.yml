@@ -46,6 +46,17 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
+    - name: Debug Variable Values
+      run: |
+        echo "GITHUB_IMAGE_WITH_TAG: ${{ env.GITHUB_IMAGE_WITH_TAG }}"
+        echo "AWS_IMAGE_WITH_SHA_TAG: ${{ env.AWS_IMAGE_WITH_SHA_TAG }}"
+        echo "AWS_IMAGE_WITH_LATEST_TAG: ${{ env.AWS_IMAGE_WITH_LATEST_TAG }}"
+      env:
+        GITHUB_IMAGE_WITH_TAG: ghcr.io/${{ github.repository }}/${{ inputs.GITHUB_IMAGE_NAME }}:${{ inputs.GITHUB_IMAGE_TAG }}
+        AWS_IMAGE_WITH_SHA_TAG: ${{ format('{0}:{1}', vars.IMAGE_REPOSITORY_URL, github.sha) }}
+        AWS_IMAGE_WITH_LATEST_TAG: ${{ format('{0}:latest', vars.IMAGE_REPOSITORY_URL) }}
+    
+
     - name: Pull, tag, and push image to Amazon ECR
       id: push-ecr
       env:
