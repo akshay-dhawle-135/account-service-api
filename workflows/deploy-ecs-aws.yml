@@ -1,0 +1,51 @@
+name: deploy - Deploy image to AWS ECS
+
+on:
+  workflow_run:
+    workflows: ["build - Build service image (Docker)"]
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      build_tag:
+        description: "Tag of the image to deploy"
+        required: false
+        default: null
+
+jobs:
+  deploy-dev:
+    name: Deploy-dev-ecs
+    if: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') || github.event_name == 'workflow_dispatch'  }}
+    concurrency:
+      group: ${{github.repository}}-deploy-dev-ecs
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    uses: "./.github/workflows/reusable-deploy-ecs.yml"
+    with:
+      GITHUB_REGISTRY: ghcr.io
+      GITHUB_IMAGE_NAME: express-api
+      GITHUB_IMAGE_TAG: ${{ (inputs.build_tag != null && inputs.build_tag) || (github.event_name == 'workflow_run' && github.event.workflow_run.head_sha) || 'main' }}
+      ENVIRONMENT: xcs-shared-technology-dev-usea1-env
+    secrets: inherit
+
+  deploy-prd:
+    name: Deploy-prd-ecs
+    needs: deploy-dev
+    if: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') || github.event_name == 'workflow_dispatch'  }}
+    concurrency:
+      group: ${{github.repository}}-deploy-prd-ecs
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    uses: "./.github/workflows/reusable-deploy-ecs.yml"
+    with:
+      GITHUB_REGISTRY: ghcr.io
+      GITHUB_IMAGE_NAME: express-api
+      GITHUB_IMAGE_TAG: ${{ (inputs.build_tag != null && inputs.build_tag) || (github.event_name == 'workflow_run' && github.event.workflow_run.head_sha) || 'main' }}
+      ENVIRONMENT: xcs-shared-technology-prd-usea1-env
+    secrets: inherit
