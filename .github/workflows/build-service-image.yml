@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io  # GitHub Container Registry
-  IMAGE_NAME: ${{ format('{0}/{1}', github.repository, 'account-service-api') }}  # Image name for Express API
+  IMAGE_NAME: ${{ format('{0}/{1}', github.repository, 'express-api') }}  # Image name for Express API
   WORKING_DIRECTORY: ./
   DOCKERFILE_RELATIVE_PATH: Dockerfile  # Path to Dockerfile
 
